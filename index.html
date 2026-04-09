@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>法令対応・単価相談管理 | ロジクエスト</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    body { font-family: 'Helvetica Neue', Arial, sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen flex items-center justify-center">
+
+  <div class="w-full max-w-sm px-6">
+    <!-- ロゴ・タイトル -->
+    <div class="text-center mb-10">
+      <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4">
+        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+      </div>
+      <h1 class="text-xl font-semibold text-slate-800">法令対応・単価相談管理</h1>
+      <p class="text-sm text-slate-500 mt-1">公正取引推進室</p>
+    </div>
+
+    <!-- ログインカード -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
+      <p class="text-sm text-slate-600 text-center mb-6">
+        ロジクエストのGoogleアカウントでログインしてください
+      </p>
+
+      <!-- Googleログインボタン -->
+      <!-- ★ Step3でGoogleクライアントIDを取得したら下記を更新 -->
+      <div id="g_id_onload"
+        data-client_id="YOUR_GOOGLE_CLIENT_ID"
+        data-callback="handleGoogleLogin"
+        data-auto_prompt="false">
+      </div>
+      <div class="flex justify-center">
+        <div class="g_id_signin"
+          data-type="standard"
+          data-shape="rectangular"
+          data-theme="outline"
+          data-text="signin_with"
+          data-size="large"
+          data-locale="ja"
+          data-width="280">
+        </div>
+      </div>
+
+      <div id="error-msg" class="hidden mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 text-center"></div>
+    </div>
+
+    <p class="text-center text-xs text-slate-400 mt-6">
+      @logiquest.co.jp アカウントのみ利用可能
+    </p>
+  </div>
+
+  <script>
+    // ★ GASデプロイ後に更新
+    const GAS_URL = 'YOUR_GAS_DEPLOYMENT_URL';
+
+    async function handleGoogleLogin(response) {
+      const idToken = response.credential;
+      showError('');
+
+      try {
+        const res = await fetch(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'initSession', idToken }),
+        });
+        const data = await res.json();
+
+        if (data.error) {
+          showError(data.error);
+          return;
+        }
+
+        // セッション保存
+        sessionStorage.setItem('token', data.token);
+        sessionStorage.setItem('user', JSON.stringify(data.user));
+
+        // アプリへ遷移
+        window.location.href = 'app.html';
+      } catch (e) {
+        showError('ログインに失敗しました。時間をおいて再試行してください。');
+      }
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('error-msg');
+      if (msg) {
+        el.textContent = msg;
+        el.classList.remove('hidden');
+      } else {
+        el.classList.add('hidden');
+      }
+    }
+
+    // すでにログイン済みなら直接遷移
+    if (sessionStorage.getItem('token')) {
+      window.location.href = 'app.html';
+    }
+  </script>
+</body>
+</html>

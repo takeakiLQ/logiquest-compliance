@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>法令対応・単価相談管理</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+  <style>
+    [x-cloak] { display: none !important; }
+    .chat-bubble-me { border-radius: 18px 18px 4px 18px; }
+    .chat-bubble-other { border-radius: 18px 18px 18px 4px; }
+    .chat-bubble-escalation { border-radius: 12px; }
+    #chat-area { scroll-behavior: smooth; }
+  </style>
+</head>
+<body class="bg-slate-100 h-screen overflow-hidden" x-data="app()" x-init="init()" x-cloak>
+
+  <!-- ログインチェック中 -->
+  <div x-show="!ready" class="h-screen flex items-center justify-center">
+    <div class="text-slate-400 text-sm">読み込み中...</div>
+  </div>
+
+  <div x-show="ready" class="h-screen flex overflow-hidden">
+
+    <!-- ========== サイドバー ========== -->
+    <aside class="w-72 bg-white border-r border-slate-200 flex flex-col flex-shrink-0">
+
+      <!-- ヘッダー -->
+      <div class="px-4 py-4 border-b border-slate-200">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h1 class="text-sm font-semibold text-slate-800">法令対応・単価相談</h1>
+            <p class="text-xs text-slate-400" x-text="user.name + '（' + user.role + '）'"></p>
+          </div>
+          <button @click="logout()" class="text-xs text-slate-400 hover:text-slate-600">ログアウト</button>
+        </div>
+
+        <!-- 新規案件ボタン -->
+        <button @click="openNewCase()"
+          class="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors">
+          ＋ 新規相談を登録
+        </button>
+      </div>
+
+      <!-- 検索・フィルター -->
+      <div class="px-4 py-3 border-b border-slate-100">
+        <input type="text" x-model="searchQuery" placeholder="案件を検索..."
+          class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400" />
+        <div class="flex gap-2 mt-2 flex-wrap">
+          <template x-for="s in statusFilters" :key="s.value">
+            <button @click="toggleFilter(s.value)"
+              :class="activeFilters.includes(s.value) ? 'bg-blue-100 text-blue-700 border-blue-300' : 'bg-slate-50 text-slate-500 border-slate-200'"
+              class="text-xs border rounded-full px-2 py-0.5 transition-colors" x-text="s.label">
+            </button>
+          </template>
+        </div>
+      </div>
+
+      <!-- 案件リスト -->
+      <div class="flex-1 overflow-y-auto">
+        <template x-for="c in filteredCases" :key="c.case_id">
+          <div @click="selectCase(c)"
+            :class="selectedCase && selectedCase.case_id === c.case_id ? 'bg-blue-50 border-l-2 border-blue-500' : 'border-l-2 border-transparent hover:bg-slate-50'"
+            class="px-4 py-3 cursor-pointer transition-colors border-b border-slate-100">
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium text-slate-800 truncate" x-text="c.contractor_name || '委託先未設定'"></p>
+                <p class="text-xs text-slate-500 truncate mt-0.5" x-text="c.shipper_name || '荷主未設定'"></p>
+              </div>
+              <span :class="statusColor(c.status)"
+                class="text-xs px-2 py-0.5 rounded-full whitespace-nowrap flex-shrink-0" x-text="c.status"></span>
+            </div>
+            <div class="flex items-center justify-between mt-1.5">
+              <span class="text-xs text-slate-400" x-text="c.consultation_type"></span>
+              <span class="text-xs text-slate-400" x-text="formatDate(c.updated_at)"></span>
+            </div>
+          </div>
+        </template>
+        <div x-show="filteredCases.length === 0" class="text-center text-sm text-slate-400 py-10">
+          案件がありません
+        </div>
+      </div>
+    </aside>
+
+    <!-- ========== メインエリア ========== -->
+    <main class="flex-1 flex flex-col overflow-hidden">
+
+      <!-- 案件未選択 -->
+      <div x-show="!selectedCase" class="flex-1 flex items-center justify-center text-slate-400 text-sm">
+        左の一覧から案件を選択してください
+      </div>
+
+      <!-- 案件詳細 -->
+      <div x-show="selectedCase" class="flex-1 flex flex-col overflow-hidden">
+
+        <!-- 案件ヘッダー -->
+        <div class="bg-white border-b border-slate-200 px-6 py-4">
+          <div class="flex items-start justify-between">
+            <div>
+              <div class="flex items-center gap-3 mb-1">
+                <h2 class="text-base font-semibold text-slate-800"
+                  x-text="selectedCase && selectedCase.contractor_name"></h2>
+                <span :class="selectedCase && statusColor(selectedCase.status)"
+                  class="text-xs px-2.5 py-0.5 rounded-full"
+                  x-text="selectedCase && selectedCase.status"></span>
+                <span x-show="selectedCase && selectedCase.priority === '急'"
+                  class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">急</span>
+              </div>
+              <p class="text-sm text-slate-500">
+                荷主：<span x-text="selectedCase && selectedCase.shipper_name"></span>
+                　担当：<span x-text="selectedCase && selectedCase.owner_name"></span>
+              </p>
+            </div>
+            <!-- ステータス変更 -->
+            <div class="flex items-center gap-2">
+              <select x-model="newStatus"
+                class="text-sm border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-blue-400">
+                <template x-for="s in statusList" :key="s">
+                  <option :value="s" x-text="s"></option>
+                </template>
+              </select>
+              <button @click="changeStatus()"
+                class="text-sm bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg transition-colors">
+                更新
+              </button>
+            </div>
+          </div>
+
+          <!-- SF情報 & 契約条件タブ -->
+          <div class="flex gap-4 mt-3">
+            <button @click="infoTab = 'contract'"
+              :class="infoTab === 'contract' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-400'"
+              class="text-xs pb-1 font-medium">契約条件</button>
+            <button @click="infoTab = 'sf'; loadSfData()"
+              :class="infoTab === 'sf' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-400'"
+              class="text-xs pb-1 font-medium">SF情報</button>
+            <button @click="infoTab = 'files'; loadFiles()"
+              :class="infoTab === 'files' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-400'"
+              class="text-xs pb-1 font-medium">ファイル</button>
+          </div>
+
+          <!-- タブ内容 -->
+          <div class="mt-3">
+            <!-- 契約条件 -->
+            <div x-show="infoTab === 'contract'" class="grid grid-cols-2 gap-4">
+              <div class="bg-slate-50 rounded-lg p-3">
+                <p class="text-xs text-slate-400 mb-1">荷主との契約条件</p>
+                <p class="text-sm text-slate-700 whitespace-pre-wrap"
+                  x-text="selectedCase && (selectedCase.shipper_conditions || '未入力')"></p>
+              </div>
+              <div class="bg-slate-50 rounded-lg p-3">
+                <p class="text-xs text-slate-400 mb-1">委託先との契約条件</p>
+                <p class="text-sm text-slate-700 whitespace-pre-wrap"
+                  x-text="selectedCase && (selectedCase.contractor_conditions || '未入力')"></p>
+              </div>
+            </div>
+
+            <!-- SF情報 -->
+            <div x-show="infoTab === 'sf'">
+              <div x-show="sfLoading" class="text-xs text-slate-400">SF情報を取得中...</div>
+              <div x-show="!sfLoading && sfData" class="grid grid-cols-3 gap-3">
+                <template x-for="(val, key) in sfData" :key="key">
+                  <div x-show="val && key !== 'Id' && key !== 'attributes'" class="bg-slate-50 rounded p-2">
+                    <p class="text-xs text-slate-400 truncate" x-text="key"></p>
+                    <p class="text-sm text-slate-700 truncate" x-text="val"></p>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <!-- ファイル -->
+            <div x-show="infoTab === 'files'">
+              <div class="flex items-center gap-3 mb-2">
+                <input type="file" id="file-input" @change="onFileSelected" class="hidden" />
+                <select x-model="uploadFileType" class="text-xs border border-slate-200 rounded px-2 py-1">
+                  <option>添付</option>
+                  <option>提出書類</option>
+                  <option>受領書類</option>
+                </select>
+                <button @click="document.getElementById('file-input').click()"
+                  class="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 px-3 py-1 rounded-lg">
+                  ファイルをアップロード
+                </button>
+                <span x-show="uploadingFile" class="text-xs text-slate-400">アップロード中...</span>
+              </div>
+              <div class="space-y-1">
+                <template x-for="f in caseFiles" :key="f.rec_id">
+                  <div class="flex items-center gap-3 bg-slate-50 rounded p-2">
+                    <span :class="fileTypeColor(f.file_type)" class="text-xs px-2 py-0.5 rounded-full" x-text="f.file_type"></span>
+                    <a :href="f.url" target="_blank" class="text-sm text-blue-600 hover:underline truncate flex-1" x-text="f.file_name"></a>
+                    <span class="text-xs text-slate-400" x-text="f.uploader_name"></span>
+                    <span class="text-xs text-slate-400" x-text="formatDate(f.uploaded_at)"></span>
+                  </div>
+                </template>
+                <div x-show="caseFiles.length === 0" class="text-xs text-slate-400 py-2">ファイルなし</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- チャットエリア -->
+        <div id="chat-area" class="flex-1 overflow-y-auto px-6 py-4 space-y-3">
+          <template x-for="msg in messages" :key="msg.message_id">
+            <div>
+              <!-- エスカレーション -->
+              <div x-show="msg.msg_type === 'エスカレーション'"
+                class="bg-amber-50 border border-amber-200 rounded-xl p-4 mx-auto max-w-lg">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-xs font-medium text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">エスカレーション</span>
+                  <span class="text-xs text-amber-600" x-text="'→ ' + msg.to_user_name"></span>
+                </div>
+                <p class="text-sm text-slate-700" x-text="msg.body.replace('【エスカレーション】','')"></p>
+                <p class="text-xs text-slate-400 mt-1">
+                  <span x-text="msg.sender_name"></span>・<span x-text="formatDateTime(msg.sent_at)"></span>
+                </p>
+              </div>
+
+              <!-- 通常メッセージ -->
+              <div x-show="msg.msg_type !== 'エスカレーション'"
+                :class="msg.sender_id === user.user_id ? 'flex-row-reverse' : ''"
+                class="flex items-end gap-2">
+                <!-- アバター -->
+                <div x-show="msg.sender_id !== user.user_id"
+                  :class="roleAvatarColor(msg.sender_role)"
+                  class="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-medium flex-shrink-0"
+                  x-text="msg.sender_name.charAt(0)">
+                </div>
+                <div :class="msg.sender_id === user.user_id ? 'items-end' : 'items-start'" class="flex flex-col max-w-md">
+                  <p x-show="msg.sender_id !== user.user_id"
+                    class="text-xs text-slate-400 mb-1"
+                    x-text="msg.sender_name + '（' + msg.sender_role + '）'"></p>
+                  <div :class="msg.sender_id === user.user_id
+                    ? 'bg-blue-600 text-white chat-bubble-me'
+                    : 'bg-white border border-slate-200 text-slate-800 chat-bubble-other'"
+                    class="px-4 py-2.5 text-sm">
+                    <p class="whitespace-pre-wrap" x-text="msg.body"></p>
+                  </div>
+                  <p class="text-xs text-slate-400 mt-1" x-text="formatDateTime(msg.sent_at)"></p>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <!-- 入力エリア -->
+        <div class="bg-white border-t border-slate-200 px-4 py-3">
+          <!-- エスカレーション -->
+          <div x-show="showEscalate" class="mb-3 bg-amber-50 border border-amber-200 rounded-xl p-3">
+            <p class="text-xs font-medium text-amber-700 mb-2">エスカレーション先を選択</p>
+            <select x-model="escalateTarget" class="w-full text-sm border border-amber-200 rounded-lg px-3 py-1.5 bg-white mb-2">
+              <option value="">-- ユーザーを選択 --</option>
+              <template x-for="u in users" :key="u.user_id">
+                <option :value="u.user_id + '|' + u.name" x-text="u.name + '（' + u.role + '）'"></option>
+              </template>
+            </select>
+            <button @click="showEscalate = false" class="text-xs text-slate-400">キャンセル</button>
+          </div>
+
+          <div class="flex items-end gap-2">
+            <button @click="showEscalate = !showEscalate"
+              :class="showEscalate ? 'bg-amber-100 text-amber-700' : 'text-slate-400 hover:text-slate-600'"
+              class="p-2 rounded-lg transition-colors flex-shrink-0" title="エスカレーション">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M7 11l5-5m0 0l5 5m-5-5v12"/>
+              </svg>
+            </button>
+            <textarea x-model="newMessage" @keydown.meta.enter="sendMessage()" @keydown.ctrl.enter="sendMessage()"
+              placeholder="メッセージを入力... (Ctrl+Enter で送信)"
+              rows="2"
+              class="flex-1 text-sm border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-blue-400 resize-none">
+            </textarea>
+            <button @click="sendMessage()" :disabled="!newMessage.trim()"
+              class="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:cursor-not-allowed text-white p-2.5 rounded-xl transition-colors flex-shrink-0">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ========== 新規案件モーダル ========== -->
+  <div x-show="showNewCase" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl w-full max-w-xl shadow-xl overflow-y-auto max-h-[90vh]">
+      <div class="px-6 py-5 border-b border-slate-200 flex items-center justify-between">
+        <h2 class="text-base font-semibold text-slate-800">新規相談を登録</h2>
+        <button @click="showNewCase = false" class="text-slate-400 hover:text-slate-600">✕</button>
+      </div>
+      <div class="px-6 py-5 space-y-4">
+
+        <!-- SF IDで検索 -->
+        <div>
+          <label class="block text-xs font-medium text-slate-500 mb-1">SalesforceアカウントID</label>
+          <div class="flex gap-2">
+            <input type="text" x-model="newCase.sf_account_id" placeholder="001XXXXXXXXXXXXXXX"
+              class="flex-1 text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400" />
+            <button @click="fetchSfForNewCase()"
+              class="text-sm bg-slate-800 text-white px-3 py-2 rounded-lg hover:bg-slate-700">
+              SF取得
+            </button>
+          </div>
+          <div x-show="sfFetched" class="mt-2 bg-blue-50 rounded-lg p-2 text-xs text-blue-700" x-text="sfFetchedMsg"></div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-500 mb-1">荷主名 <span class="text-red-400">*</span></label>
+          <input type="text" x-model="newCase.shipper_name"
+            class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400" />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-500 mb-1">委託先名 <span class="text-red-400">*</span></label>
+          <input type="text" x-model="newCase.contractor_name"
+            class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">相談区分</label>
+            <select x-model="newCase.consultation_type"
+              class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none">
+              <option>単価交渉</option>
+              <option>その他法令対応</option>
+              <option>契約見直し</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">優先度</label>
+            <select x-model="newCase.priority"
+              class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none">
+              <option>通常</option>
+              <option>急</option>
+              <option>低</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-500 mb-1">荷主との契約条件</label>
+          <textarea x-model="newCase.shipper_conditions" rows="3"
+            placeholder="現在の荷主との運賃・条件など"
+            class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400 resize-none"></textarea>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-500 mb-1">委託先との契約条件</label>
+          <textarea x-model="newCase.contractor_conditions" rows="3"
+            placeholder="現在の委託先との運賃・条件など"
+            class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400 resize-none"></textarea>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-500 mb-1">相談概要</label>
+          <textarea x-model="newCase.summary" rows="3"
+            placeholder="委託先から単価アップの交渉があった背景・詳細など"
+            class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400 resize-none"></textarea>
+        </div>
+      </div>
+      <div class="px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
+        <button @click="showNewCase = false"
+          class="text-sm text-slate-500 hover:text-slate-700 px-4 py-2">キャンセル</button>
+        <button @click="submitNewCase()" :disabled="!newCase.shipper_name || !newCase.contractor_name"
+          class="text-sm bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 text-white px-5 py-2 rounded-lg transition-colors">
+          登録する
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const GAS_URL = 'YOUR_GAS_DEPLOYMENT_URL'; // デプロイ後に更新
+
+    function app() {
+      return {
+        ready: false,
+        user: {},
+        token: '',
+        cases: [],
+        selectedCase: null,
+        messages: [],
+        caseFiles: [],
+        users: [],
+        sfData: null,
+        sfLoading: false,
+        newMessage: '',
+        showNewCase: false,
+        showEscalate: false,
+        escalateTarget: '',
+        searchQuery: '',
+        activeFilters: [],
+        newStatus: '',
+        infoTab: 'contract',
+        uploadFileType: '添付',
+        uploadingFile: false,
+        sfFetched: false,
+        sfFetchedMsg: '',
+        newCase: {},
+
+        statusList: ['新規相談','公取確認中','対応方針決定','委託先交渉中','書類提出済','完了','取り下げ'],
+        statusFilters: [
+          { value: '新規相談', label: '新規' },
+          { value: '公取確認中', label: '公取確認中' },
+          { value: '対応方針決定', label: '方針決定' },
+          { value: '委託先交渉中', label: '交渉中' },
+          { value: '書類提出済', label: '書類提出済' },
+          { value: '完了', label: '完了' },
+        ],
+
+        async init() {
+          this.token = sessionStorage.getItem('token');
+          const u = sessionStorage.getItem('user');
+          if (!this.token || !u) { window.location.href = 'index.html'; return; }
+          this.user = JSON.parse(u);
+          await this.loadCases();
+          await this.loadUsers();
+          this.ready = true;
+        },
+
+        async api(payload) {
+          const res = await fetch(GAS_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...payload, token: this.token }),
+          });
+          return res.json();
+        },
+
+        async loadCases() {
+          const data = await this.api({ action: 'getCases' });
+          this.cases = data.cases || [];
+        },
+
+        async loadUsers() {
+          const data = await this.api({ action: 'getUsers' });
+          this.users = data.users || [];
+        },
+
+        async selectCase(c) {
+          this.selectedCase = c;
+          this.newStatus = c.status;
+          this.infoTab = 'contract';
+          this.sfData = null;
+          this.caseFiles = [];
+          this.showEscalate = false;
+          await this.loadMessages();
+        },
+
+        async loadMessages() {
+          const data = await this.api({ action: 'getMessages', case_id: this.selectedCase.case_id });
+          this.messages = data.messages || [];
+          this.$nextTick(() => {
+            const el = document.getElementById('chat-area');
+            if (el) el.scrollTop = el.scrollHeight;
+          });
+        },
+
+        async loadFiles() {
+          const data = await this.api({ action: 'getFiles', case_id: this.selectedCase.case_id });
+          this.caseFiles = data.files || [];
+        },
+
+        async loadSfData() {
+          if (!this.selectedCase.sf_account_id) return;
+          this.sfLoading = true;
+          const data = await this.api({
+            action: 'getSfData',
+            account_id: this.selectedCase.sf_account_id,
+            contract_id: this.selectedCase.sf_contract_id,
+          });
+          this.sfData = data.account || {};
+          this.sfLoading = false;
+        },
+
+        async sendMessage() {
+          if (!this.newMessage.trim()) return;
+          const isEscalate = this.showEscalate && this.escalateTarget;
+          const [toId, toName] = isEscalate ? this.escalateTarget.split('|') : ['', ''];
+
+          await this.api({
+            action: isEscalate ? 'escalate' : 'sendMessage',
+            case_id: this.selectedCase.case_id,
+            body: this.newMessage,
+            msg_type: isEscalate ? 'エスカレーション' : '通常',
+            to_user_id: toId,
+            to_user_name: toName,
+          });
+
+          this.newMessage = '';
+          this.showEscalate = false;
+          this.escalateTarget = '';
+          await this.loadMessages();
+        },
+
+        async changeStatus() {
+          if (this.newStatus === this.selectedCase.status) return;
+          await this.api({
+            action: 'updateStatus',
+            case_id: this.selectedCase.case_id,
+            new_status: this.newStatus,
+          });
+          this.selectedCase.status = this.newStatus;
+          await this.loadCases();
+        },
+
+        async onFileSelected(event) {
+          const file = event.target.files[0];
+          if (!file) return;
+          this.uploadingFile = true;
+
+          const reader = new FileReader();
+          reader.onload = async (e) => {
+            const base64 = e.target.result.split(',')[1];
+            await this.api({
+              action: 'uploadFile',
+              case_id: this.selectedCase.case_id,
+              file_name: file.name,
+              file_data: base64,
+              mime_type: file.type,
+              file_type: this.uploadFileType,
+            });
+            this.uploadingFile = false;
+            await this.loadFiles();
+          };
+          reader.readAsDataURL(file);
+          event.target.value = '';
+        },
+
+        openNewCase() {
+          this.newCase = {
+            sf_account_id: '', sf_contract_id: '',
+            shipper_name: '', contractor_name: '',
+            consultation_type: '単価交渉', priority: '通常',
+            shipper_conditions: '', contractor_conditions: '', summary: '',
+          };
+          this.sfFetched = false;
+          this.showNewCase = true;
+        },
+
+        async fetchSfForNewCase() {
+          if (!this.newCase.sf_account_id) return;
+          const data = await this.api({ action: 'getSfData', account_id: this.newCase.sf_account_id });
+          if (data.account) {
+            this.newCase.shipper_name = this.newCase.shipper_name || data.account.Name || '';
+            this.sfFetched = true;
+            this.sfFetchedMsg = `取得成功：${data.account.Name}`;
+          } else {
+            this.sfFetched = true;
+            this.sfFetchedMsg = 'SFデータが見つかりません';
+          }
+        },
+
+        async submitNewCase() {
+          const data = await this.api({ action: 'createCase', ...this.newCase });
+          if (data.success) {
+            this.showNewCase = false;
+            await this.loadCases();
+            const created = this.cases.find(c => c.case_id === data.case_id);
+            if (created) this.selectCase(created);
+          }
+        },
+
+        get filteredCases() {
+          return this.cases.filter(c => {
+            const q = this.searchQuery.toLowerCase();
+            const matchQuery = !q ||
+              (c.contractor_name || '').toLowerCase().includes(q) ||
+              (c.shipper_name || '').toLowerCase().includes(q) ||
+              (c.summary || '').toLowerCase().includes(q);
+            const matchFilter = this.activeFilters.length === 0 || this.activeFilters.includes(c.status);
+            return matchQuery && matchFilter;
+          });
+        },
+
+        toggleFilter(val) {
+          const idx = this.activeFilters.indexOf(val);
+          if (idx >= 0) this.activeFilters.splice(idx, 1);
+          else this.activeFilters.push(val);
+        },
+
+        statusColor(status) {
+          const map = {
+            '新規相談': 'bg-blue-100 text-blue-700',
+            '公取確認中': 'bg-purple-100 text-purple-700',
+            '対応方針決定': 'bg-indigo-100 text-indigo-700',
+            '委託先交渉中': 'bg-amber-100 text-amber-700',
+            '書類提出済': 'bg-orange-100 text-orange-700',
+            '完了': 'bg-green-100 text-green-700',
+            '取り下げ': 'bg-slate-100 text-slate-500',
+          };
+          return map[status] || 'bg-slate-100 text-slate-500';
+        },
+
+        roleAvatarColor(role) {
+          const map = {
+            '公取': 'bg-purple-500',
+            '上長': 'bg-slate-600',
+            '営業': 'bg-blue-500',
+          };
+          return map[role] || 'bg-slate-400';
+        },
+
+        fileTypeColor(type) {
+          const map = {
+            '提出書類': 'bg-blue-100 text-blue-700',
+            '受領書類': 'bg-green-100 text-green-700',
+            '添付': 'bg-slate-100 text-slate-500',
+          };
+          return map[type] || 'bg-slate-100 text-slate-500';
+        },
+
+        formatDate(iso) {
+          if (!iso) return '';
+          return new Date(iso).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' });
+        },
+
+        formatDateTime(iso) {
+          if (!iso) return '';
+          return new Date(iso).toLocaleString('ja-JP', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        },
+
+        logout() {
+          sessionStorage.clear();
+          window.location.href = 'index.html';
+        },
+      };
+    }
+  </script>
+</body>
+</html>
