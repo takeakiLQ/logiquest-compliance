@@ -419,8 +419,10 @@
         },
 
         async api(payload) {
-          const params = new URLSearchParams({ ...payload, token: this.token });
-          const res = await fetch(GAS_URL + '?' + params.toString(), { method: 'GET' });
+          const res = await fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify({ ...payload, token: this.token }),
+          });
           return res.json();
         },
 
