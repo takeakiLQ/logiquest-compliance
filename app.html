@@ -540,13 +540,22 @@
         async fetchSfForNewCase() {
           if (!this.newCase.sf_account_id) return;
           const data = await this.api({ action: 'getSfData', account_id: this.newCase.sf_account_id });
-          if (data.account) {
-            this.newCase.shipper_name = this.newCase.shipper_name || data.account.Name || '';
+          if (data.record) {
+            if (data.shipper_name) this.newCase.shipper_name = data.shipper_name;
+            if (data.contractor_name) this.newCase.contractor_name = data.contractor_name;
             this.sfFetched = true;
-            this.sfFetchedMsg = `取得成功：${data.account.Name}`;
+            this.sfFetchedMsg = [
+              `取得成功：${data.record_name}`,
+              data.shipper_name ? `荷主: ${data.shipper_name}` : '',
+              data.contractor_name ? `委託先: ${data.contractor_name}` : '',
+              data.driver_situation ? `配車ステータス: ${data.driver_situation}` : '',
+              data.partner_type ? `委託先区分: ${data.partner_type}` : '',
+              data.start_date ? `開始: ${data.start_date}` : '',
+              data.end_date ? `終了: ${data.end_date}` : '',
+            ].filter(Boolean).join('　');
           } else {
             this.sfFetched = true;
-            this.sfFetchedMsg = 'SFデータが見つかりません';
+            this.sfFetchedMsg = 'SFデータが見つかりません: ' + (data.error || '');
           }
         },
 
