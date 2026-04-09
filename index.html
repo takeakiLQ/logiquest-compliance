@@ -62,11 +62,8 @@
       showError('');
 
       try {
-        const res = await fetch(GAS_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'initSession', idToken }),
-        });
+        const url = GAS_URL + '?action=initSession&idToken=' + encodeURIComponent(idToken);
+        const res = await fetch(url, { method: 'GET' });
         const data = await res.json();
 
         if (data.error) {
@@ -78,7 +75,7 @@
         sessionStorage.setItem('user', JSON.stringify(data.user));
         window.location.href = 'app.html';
       } catch (e) {
-        showError('ログインに失敗しました。時間をおいて再試行してください。');
+        showError('ログインに失敗しました: ' + e.message);
       }
     }
 
