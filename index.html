@@ -13,7 +13,6 @@
 <body class="bg-slate-50 min-h-screen flex items-center justify-center">
 
   <div class="w-full max-w-sm px-6">
-    <!-- ロゴ・タイトル -->
     <div class="text-center mb-10">
       <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4">
         <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -25,16 +24,13 @@
       <p class="text-sm text-slate-500 mt-1">公正取引推進室</p>
     </div>
 
-    <!-- ログインカード -->
     <div class="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
       <p class="text-sm text-slate-600 text-center mb-6">
         ロジクエストのGoogleアカウントでログインしてください
       </p>
 
-      <!-- Googleログインボタン -->
-      <!-- ★ Step3でGoogleクライアントIDを取得したら下記を更新 -->
       <div id="g_id_onload"
-        data-client_id="YOUR_GOOGLE_CLIENT_ID"
+        data-client_id="308558268473-jjrgj45gup5k9odv4q8gto98hqjq05vt.apps.googleusercontent.com"
         data-callback="handleGoogleLogin"
         data-auto_prompt="false">
       </div>
@@ -59,8 +55,7 @@
   </div>
 
   <script>
-    // ★ GASデプロイ後に更新
-    const GAS_URL = 'YOUR_GAS_DEPLOYMENT_URL';
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbwh3-gII3jQ7OVvNaYQ07G0L9w_DVcbDvFljbYlCVFkBk5xRb996iy7H8W8ZmBeCDkh/exec';
 
     async function handleGoogleLogin(response) {
       const idToken = response.credential;
@@ -79,11 +74,8 @@
           return;
         }
 
-        // セッション保存
         sessionStorage.setItem('token', data.token);
         sessionStorage.setItem('user', JSON.stringify(data.user));
-
-        // アプリへ遷移
         window.location.href = 'app.html';
       } catch (e) {
         showError('ログインに失敗しました。時間をおいて再試行してください。');
@@ -100,7 +92,6 @@
       }
     }
 
-    // すでにログイン済みなら直接遷移
     if (sessionStorage.getItem('token')) {
       window.location.href = 'app.html';
     }
