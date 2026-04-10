@@ -233,6 +233,10 @@
                     <p class="text-xs text-slate-400">終了日</p>
                     <p class="text-sm text-slate-700" x-text="sfData && sfData.end_date || '—'"></p>
                   </div>
+                  <div class="bg-slate-50 rounded p-2 col-span-3">
+                    <p class="text-xs text-slate-400">運送業務内容</p>
+                    <p class="text-sm text-slate-700 whitespace-pre-wrap" x-text="sfData && sfData.shipping_memo || '—'"></p>
+                  </div>
                 </div>
                 <div class="flex items-center justify-between">
                   <p class="text-xs text-slate-400" x-show="sfData && sfData.fetched_at"
@@ -649,6 +653,7 @@
             partner_type:     this.selectedCase.sf_partner_type || '—',
             start_date:       this.selectedCase.sf_start_date || '—',
             end_date:         this.selectedCase.sf_end_date || '—',
+            shipping_memo:    this.selectedCase.sf_shipping_memo || '—',
             fetched_at:       this.selectedCase.sf_fetched_at || '',
           };
         },
@@ -671,6 +676,7 @@
               sf_partner_type:     data.partner_type || '',
               sf_start_date:       data.start_date || '',
               sf_end_date:         data.end_date || '',
+              sf_shipping_memo:    data.shipping_memo || '',
               sf_fetched_at:       new Date().toISOString(),
             };
             await updateDoc(doc(db, 'cases', this.selectedCase.id), sfInfo);
@@ -861,6 +867,7 @@
                   sf_partner_type:     data.partner_type || '',
                   sf_start_date:       data.start_date || '',
                   sf_end_date:         data.end_date || '',
+                  sf_shipping_memo:    data.shipping_memo || '',
                   sf_fetched_at:       now,
                 };
                 // 荷主・委託先名が未入力なら自動補完
