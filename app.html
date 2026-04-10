@@ -5,7 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>法令対応・単価相談管理</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+  <script>
+    // Alpine.jsの初期化を遅延させる
+    document.addEventListener('alpine:init', () => {
+      // appDataがセットされるまで待つ
+    });
+  </script>
   <style>
     [x-cloak] { display: none !important; }
     .chat-bubble-me { border-radius: 18px 18px 4px 18px; }
@@ -373,6 +378,12 @@
     const ALLOWED_DOMAIN = 'logiquest.co.jp';
 
     window.appData = { auth, db, GAS_URL, ALLOWED_DOMAIN, serverTimestamp, collection, doc, addDoc, updateDoc, onSnapshot, query, where, orderBy, getDoc, getDocs, setDoc };
+
+    // Firebase読み込み完了後にAlpine.jsを動的に読み込む
+    const alpineScript = document.createElement('script');
+    alpineScript.src = 'https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js';
+    alpineScript.defer = true;
+    document.head.appendChild(alpineScript);
   </script>
 
   <script>
@@ -452,12 +463,13 @@
             });
           });
 
-          // 案件一覧をリアルタイムで取得
+          // 案件一覧をリアルタイムで取得（orderByなしでシンプルに）
           const casesRef = collection(db, 'cases');
-          const q = query(casesRef, orderBy('updated_at', 'desc'));
-          onSnapshot(q, (snapshot) => {
+          onSnapshot(casesRef, (snapshot) => {
             const allCases = [];
             snapshot.forEach(d => allCases.push({ id: d.id, ...d.data() }));
+            // 更新日降順でソート
+            allCases.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
             // 営業は自分の案件のみ
             this.cases = this.user.role === '営業'
               ? allCases.filter(c => c.owner_id === this.user.uid)
@@ -480,17 +492,18 @@
           this.caseFiles = [];
           this.showEscalate = false;
 
-          // メッセージをリアルタイム購読
+          // メッセージをリアルタイム購読（whereのみ、orderByなし）
           if (this.unsubMessages) this.unsubMessages();
-          const { db, collection, query, where, orderBy, onSnapshot } = window.appData;
+          const { db, collection, query, where, onSnapshot } = window.appData;
           const q = query(
             collection(db, 'messages'),
-            where('case_id', '==', c.id),
-            orderBy('sent_at', 'asc')
+            where('case_id', '==', c.id)
           );
           this.unsubMessages = onSnapshot(q, (snapshot) => {
             this.messages = [];
             snapshot.forEach(d => this.messages.push({ id: d.id, ...d.data() }));
+            // 送信日昇順でソート
+            this.messages.sort((a, b) => new Date(a.sent_at) - new Date(b.sent_at));
             this.$nextTick(() => {
               const el = document.getElementById('chat-area');
               if (el) el.scrollTop = el.scrollHeight;
