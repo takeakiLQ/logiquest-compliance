@@ -130,14 +130,77 @@
 
           <div class="mt-3">
             <!-- 契約条件 -->
-            <div x-show="infoTab === 'contract'" class="grid grid-cols-2 gap-4">
-              <div class="bg-slate-50 rounded-lg p-3">
-                <p class="text-xs text-slate-400 mb-1">荷主との契約条件</p>
-                <p class="text-sm text-slate-700 whitespace-pre-wrap" x-text="selectedCase && (selectedCase.shipper_conditions || '未入力')"></p>
+            <div x-show="infoTab === 'contract'">
+              <!-- 編集ロック Switch -->
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs text-slate-500" x-text="editLocked ? 'ロック中（編集不可）' : '編集モード'"></span>
+                <div class="flex items-center gap-2">
+                  <span class="text-xs" :class="editLocked ? 'text-slate-400' : 'text-blue-600 font-medium'">
+                    <svg x-show="editLocked" class="w-3.5 h-3.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                    <svg x-show="!editLocked" class="w-3.5 h-3.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/>
+                    </svg>
+                  </span>
+                  <button @click="editLocked = !editLocked"
+                    :class="editLocked ? 'bg-slate-200' : 'bg-blue-500'"
+                    class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors">
+                    <span :class="editLocked ? 'translate-x-1' : 'translate-x-5'"
+                      class="inline-block h-3 w-3 transform rounded-full bg-white transition-transform"></span>
+                  </button>
+                </div>
               </div>
-              <div class="bg-slate-50 rounded-lg p-3">
-                <p class="text-xs text-slate-400 mb-1">委託先との契約条件</p>
-                <p class="text-sm text-slate-700 whitespace-pre-wrap" x-text="selectedCase && (selectedCase.contractor_conditions || '未入力')"></p>
+
+              <!-- 表示モード（ロック時） -->
+              <div x-show="editLocked" class="grid grid-cols-2 gap-4">
+                <div class="bg-slate-50 rounded-lg p-3">
+                  <p class="text-xs text-slate-400 mb-1">荷主との契約条件</p>
+                  <p class="text-sm text-slate-700 whitespace-pre-wrap" x-text="selectedCase && (selectedCase.shipper_conditions || '未入力')"></p>
+                </div>
+                <div class="bg-slate-50 rounded-lg p-3">
+                  <p class="text-xs text-slate-400 mb-1">委託先との契約条件</p>
+                  <p class="text-sm text-slate-700 whitespace-pre-wrap" x-text="selectedCase && (selectedCase.contractor_conditions || '未入力')"></p>
+                </div>
+              </div>
+
+              <!-- 編集モード（アンロック時） -->
+              <div x-show="!editLocked" class="space-y-3">
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs text-slate-400 mb-1">荷主名</label>
+                    <input type="text" x-model="editCase.shipper_name"
+                      class="w-full text-sm border border-blue-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400" />
+                  </div>
+                  <div>
+                    <label class="block text-xs text-slate-400 mb-1">委託先名</label>
+                    <input type="text" x-model="editCase.contractor_name"
+                      class="w-full text-sm border border-blue-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400" />
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs text-slate-400 mb-1">荷主との契約条件</label>
+                    <textarea x-model="editCase.shipper_conditions" rows="3"
+                      class="w-full text-sm border border-blue-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:border-blue-400"></textarea>
+                  </div>
+                  <div>
+                    <label class="block text-xs text-slate-400 mb-1">委託先との契約条件</label>
+                    <textarea x-model="editCase.contractor_conditions" rows="3"
+                      class="w-full text-sm border border-blue-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:border-blue-400"></textarea>
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-xs text-slate-400 mb-1">相談概要</label>
+                  <textarea x-model="editCase.summary" rows="2"
+                    class="w-full text-sm border border-blue-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:border-blue-400"></textarea>
+                </div>
+                <div class="flex gap-2 justify-end">
+                  <button @click="editLocked = true"
+                    class="text-xs text-slate-400 hover:text-slate-600 px-3 py-1.5">キャンセル</button>
+                  <button @click="saveCase()"
+                    class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg transition-colors">保存</button>
+                </div>
               </div>
             </div>
 
@@ -170,10 +233,11 @@
                 <div class="flex items-center justify-between">
                   <p class="text-xs text-slate-400" x-show="sfData && sfData.fetched_at"
                     x-text="'取得日時：' + formatDateTime(sfData && sfData.fetched_at)"></p>
-                  <button @click="loadSfData()"
+                  <button @click="loadSfData()" x-show="!editLocked"
                     class="text-xs text-blue-600 hover:text-blue-800 border border-blue-200 px-3 py-1 rounded-lg">
                     SFから再取得
                   </button>
+                  <span x-show="editLocked" class="text-xs text-slate-400">🔒 再取得はロック解除後に可能</span>
                 </div>
               </div>
             </div>
@@ -181,7 +245,7 @@
             <!-- ファイル -->
             <div x-show="infoTab === 'files'">
               <div class="flex items-center gap-3 mb-2">
-                <input type="file" id="file-input" @change="onFileSelected" class="hidden" />
+                <input type="file" id="file-input" @change="onFileSelected" class="hidden" multiple />
                 <select x-model="uploadFileType" class="text-xs border border-slate-200 rounded px-2 py-1">
                   <option>添付</option>
                   <option>提出書類</option>
@@ -189,33 +253,37 @@
                 </select>
                 <button @click="document.getElementById('file-input').click()"
                   class="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 px-3 py-1 rounded-lg">
-                  ファイルを選択
+                  ファイルを選択（複数可）
                 </button>
                 <span x-show="uploadingFile" class="text-xs text-slate-400">アップロード中...</span>
               </div>
 
-              <!-- ファイル確認エリア -->
-              <div x-show="pendingFile" class="mb-3 bg-blue-50 border border-blue-200 rounded-xl p-3">
-                <p class="text-xs font-medium text-blue-700 mb-2">以下のファイルをアップロードしますか？</p>
-                <div class="flex items-center gap-2 mb-3">
-                  <svg class="w-4 h-4 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
-                  </svg>
-                  <div>
-                    <p class="text-sm font-medium text-slate-700" x-text="pendingFile && pendingFile.name"></p>
-                    <p class="text-xs text-slate-400" x-text="pendingFile && (Math.round(pendingFile.size / 1024) + ' KB') + ' ・ ' + uploadFileType"></p>
-                  </div>
+              <!-- 複数ファイル確認エリア -->
+              <div x-show="pendingFiles.length > 0" class="mb-3 bg-blue-50 border border-blue-200 rounded-xl p-3">
+                <div class="flex items-center justify-between mb-2">
+                  <p class="text-xs font-medium text-blue-700" x-text="pendingFiles.length + '件のファイルをアップロードします'"></p>
+                  <button @click="pendingFiles = []" class="text-xs text-slate-400 hover:text-slate-600">全てキャンセル</button>
                 </div>
-                <div class="flex gap-2">
-                  <button @click="confirmUpload()"
-                    class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg transition-colors">
-                    アップロード確定
-                  </button>
-                  <button @click="cancelUpload()"
-                    class="text-xs text-slate-400 hover:text-slate-600 px-3 py-1.5">
-                    キャンセル
-                  </button>
+                <div class="space-y-1 mb-3">
+                  <template x-for="(pf, idx) in pendingFiles" :key="idx">
+                    <div class="flex items-center gap-2 bg-white rounded-lg px-3 py-2">
+                      <svg class="w-3.5 h-3.5 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+                      </svg>
+                      <span class="text-xs text-slate-700 flex-1 truncate" x-text="pf.name"></span>
+                      <span class="text-xs text-slate-400" x-text="Math.round(pf.size / 1024) + ' KB'"></span>
+                      <button @click="pendingFiles.splice(idx, 1)" class="text-slate-300 hover:text-red-400 ml-1">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                      </button>
+                    </div>
+                  </template>
                 </div>
+                <button @click="confirmUpload()"
+                  class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg transition-colors">
+                  アップロード確定
+                </button>
               </div>
               <div class="space-y-1">
                 <template x-for="f in caseFiles" :key="f.id">
@@ -442,7 +510,9 @@
         infoTab: 'contract',
         uploadFileType: '添付',
         uploadingFile: false,
-        pendingFile: null,
+        pendingFiles: [],
+        editLocked: true,
+        editCase: {},
         sfFetched: false,
         sfFetchedMsg: '',
         newCase: {},
@@ -526,6 +596,16 @@
           this.sfData = null;
           this.caseFiles = [];
           this.showEscalate = false;
+          this.editLocked = true;
+          this.pendingFiles = [];
+          // 編集用データを初期化
+          this.editCase = {
+            shipper_name: c.shipper_name || '',
+            contractor_name: c.contractor_name || '',
+            shipper_conditions: c.shipper_conditions || '',
+            contractor_conditions: c.contractor_conditions || '',
+            summary: c.summary || '',
+          };
 
           // メッセージをリアルタイム購読（whereのみ、orderByなし）
           if (this.unsubMessages) this.unsubMessages();
@@ -656,59 +736,70 @@
           this.selectedCase.status = this.newStatus;
         },
 
-        // ファイル選択（展開なし、確認を待つ）
+        // ファイル選択（複数対応）
         onFileSelected(event) {
-          const file = event.target.files[0];
-          if (!file) return;
-          this.pendingFile = file;
+          const files = Array.from(event.target.files);
+          this.pendingFiles = [...this.pendingFiles, ...files];
           event.target.value = '';
         },
 
-        // アップロード確定
+        // アップロード確定（複数一括）
         async confirmUpload() {
-          const file = this.pendingFile;
-          if (!file) return;
+          if (this.pendingFiles.length === 0) return;
           this.uploadingFile = true;
-          this.pendingFile = null;
+          const files = [...this.pendingFiles];
+          this.pendingFiles = [];
 
-          const reader = new FileReader();
-          reader.onload = async (e) => {
-            const base64 = e.target.result.split(',')[1];
-            const params = new URLSearchParams({
-              action: 'uploadFile',
-              case_id: this.selectedCase.id,
-              file_name: file.name,
-              file_data: base64,
-              mime_type: file.type,
-              file_type: this.uploadFileType,
-            });
-            const res = await fetch(window.appData.GAS_URL + '?' + params.toString());
-            const data = await res.json();
-
-            if (data.success) {
-              const { db, collection, addDoc } = window.appData;
-              await addDoc(collection(db, 'files'), {
+          for (const file of files) {
+            try {
+              const base64 = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result.split(',')[1]);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+              });
+              const params = new URLSearchParams({
+                action: 'uploadFile',
                 case_id: this.selectedCase.id,
                 file_name: file.name,
-                drive_file_id: data.file_id,
-                url: data.url,
-                uploader_id: this.user.uid,
-                uploader_name: this.user.name,
-                uploaded_at: new Date().toISOString(),
+                file_data: base64,
+                mime_type: file.type,
                 file_type: this.uploadFileType,
               });
-              await this.loadFiles();
-            } else {
-              alert('アップロード失敗: ' + (data.error || '不明なエラー'));
+              const res = await fetch(window.appData.GAS_URL + '?' + params.toString());
+              const data = await res.json();
+              if (data.success) {
+                const { db, collection, addDoc } = window.appData;
+                await addDoc(collection(db, 'files'), {
+                  case_id: this.selectedCase.id,
+                  file_name: file.name,
+                  drive_file_id: data.file_id,
+                  url: data.url,
+                  uploader_id: this.user.uid,
+                  uploader_name: this.user.name,
+                  uploaded_at: new Date().toISOString(),
+                  file_type: this.uploadFileType,
+                });
+              }
+            } catch(e) {
+              console.error('アップロードエラー:', file.name, e);
             }
-            this.uploadingFile = false;
-          };
-          reader.readAsDataURL(file);
+          }
+          await this.loadFiles();
+          this.uploadingFile = false;
         },
 
-        // アップロードキャンセル
-        cancelUpload() {
-          this.pendingFile = null;
+        // 案件情報を保存
+        async saveCase() {
+          const { db, doc, updateDoc } = window.appData;
+          const now = new Date().toISOString();
+          await updateDoc(doc(db, 'cases', this.selectedCase.id), {
+            ...this.editCase,
+            updated_at: now,
+          });
+          // ローカルの選択中案件を更新
+          Object.assign(this.selectedCase, this.editCase, { updated_at: now });
+          this.editLocked = true;
         },
 
         openNewCase() {
