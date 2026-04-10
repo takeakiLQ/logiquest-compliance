@@ -120,7 +120,7 @@
             <button @click="infoTab = 'contract'"
               :class="infoTab === 'contract' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-400'"
               class="text-xs pb-1 font-medium">契約条件</button>
-            <button @click="infoTab = 'sf'; loadSfData()"
+            <button @click="infoTab = 'sf'; showSfData()"
               :class="infoTab === 'sf' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-400'"
               class="text-xs pb-1 font-medium">SF情報</button>
             <button @click="infoTab = 'files'; loadFiles()"
@@ -144,26 +144,36 @@
             <!-- SF情報 -->
             <div x-show="infoTab === 'sf'">
               <div x-show="sfLoading" class="text-xs text-slate-400">SF情報を取得中...</div>
-              <div x-show="!sfLoading && sfData" class="grid grid-cols-3 gap-3">
-                <div class="bg-slate-50 rounded p-2">
-                  <p class="text-xs text-slate-400">案件名</p>
-                  <p class="text-sm text-slate-700 truncate" x-text="sfData && sfData.record_name || '—'"></p>
+              <div x-show="!sfLoading" class="space-y-3">
+                <div class="grid grid-cols-3 gap-3">
+                  <div class="bg-slate-50 rounded p-2">
+                    <p class="text-xs text-slate-400">案件名</p>
+                    <p class="text-sm text-slate-700 truncate" x-text="sfData && sfData.record_name || '—'"></p>
+                  </div>
+                  <div class="bg-slate-50 rounded p-2">
+                    <p class="text-xs text-slate-400">配車ステータス</p>
+                    <p class="text-sm text-slate-700 truncate" x-text="sfData && sfData.driver_situation || '—'"></p>
+                  </div>
+                  <div class="bg-slate-50 rounded p-2">
+                    <p class="text-xs text-slate-400">委託先区分</p>
+                    <p class="text-sm text-slate-700 truncate" x-text="sfData && sfData.partner_type || '—'"></p>
+                  </div>
+                  <div class="bg-slate-50 rounded p-2">
+                    <p class="text-xs text-slate-400">開始日</p>
+                    <p class="text-sm text-slate-700" x-text="sfData && sfData.start_date || '—'"></p>
+                  </div>
+                  <div class="bg-slate-50 rounded p-2">
+                    <p class="text-xs text-slate-400">終了日</p>
+                    <p class="text-sm text-slate-700" x-text="sfData && sfData.end_date || '—'"></p>
+                  </div>
                 </div>
-                <div class="bg-slate-50 rounded p-2">
-                  <p class="text-xs text-slate-400">配車ステータス</p>
-                  <p class="text-sm text-slate-700 truncate" x-text="sfData && sfData.driver_situation || '—'"></p>
-                </div>
-                <div class="bg-slate-50 rounded p-2">
-                  <p class="text-xs text-slate-400">委託先区分</p>
-                  <p class="text-sm text-slate-700 truncate" x-text="sfData && sfData.partner_type || '—'"></p>
-                </div>
-                <div class="bg-slate-50 rounded p-2">
-                  <p class="text-xs text-slate-400">開始日</p>
-                  <p class="text-sm text-slate-700" x-text="sfData && sfData.start_date || '—'"></p>
-                </div>
-                <div class="bg-slate-50 rounded p-2">
-                  <p class="text-xs text-slate-400">終了日</p>
-                  <p class="text-sm text-slate-700" x-text="sfData && sfData.end_date || '—'"></p>
+                <div class="flex items-center justify-between">
+                  <p class="text-xs text-slate-400" x-show="sfData && sfData.fetched_at"
+                    x-text="'取得日時：' + formatDateTime(sfData && sfData.fetched_at)"></p>
+                  <button @click="loadSfData()"
+                    class="text-xs text-blue-600 hover:text-blue-800 border border-blue-200 px-3 py-1 rounded-lg">
+                    SFから再取得
+                  </button>
                 </div>
               </div>
             </div>
@@ -544,27 +554,45 @@
           snap.forEach(d => this.caseFiles.push({ id: d.id, ...d.data() }));
         },
 
+        // SF情報をFirestoreのデータから表示（GASは叩かない）
+        showSfData() {
+          if (!this.selectedCase) return;
+          this.sfData = {
+            record_name:      this.selectedCase.sf_record_name || '—',
+            shipper_name:     this.selectedCase.sf_shipper_name || this.selectedCase.shipper_name || '—',
+            contractor_name:  this.selectedCase.sf_contractor_name || this.selectedCase.contractor_name || '—',
+            driver_situation: this.selectedCase.sf_driver_situation || '—',
+            partner_type:     this.selectedCase.sf_partner_type || '—',
+            start_date:       this.selectedCase.sf_start_date || '—',
+            end_date:         this.selectedCase.sf_end_date || '—',
+            fetched_at:       this.selectedCase.sf_fetched_at || '',
+          };
+        },
+
+        // GASからSFデータを再取得（必要な場合のみ）
         async loadSfData() {
-          // FirestoreにSF情報が保存済みなら直接表示
-          if (this.selectedCase.sf_record_name !== undefined) {
-            this.sfData = {
-              record_name:      this.selectedCase.sf_record_name,
-              shipper_name:     this.selectedCase.sf_shipper_name,
-              contractor_name:  this.selectedCase.sf_contractor_name,
-              driver_situation: this.selectedCase.sf_driver_situation,
-              partner_type:     this.selectedCase.sf_partner_type,
-              start_date:       this.selectedCase.sf_start_date,
-              end_date:         this.selectedCase.sf_end_date,
-            };
-            return;
-          }
-          // 未取得の場合はGASから取得
           if (!this.selectedCase.sf_record_id) return;
           this.sfLoading = true;
           const url = window.appData.GAS_URL + '?action=getSfData&account_id=' + this.selectedCase.sf_record_id;
           const res = await fetch(url);
           const data = await res.json();
-          this.sfData = data;
+          if (data.record) {
+            // Firestoreにも保存し直す
+            const { db, doc, updateDoc } = window.appData;
+            const sfInfo = {
+              sf_record_name:      data.record_name || '',
+              sf_shipper_name:     data.shipper_name || '',
+              sf_contractor_name:  data.contractor_name || '',
+              sf_driver_situation: data.driver_situation || '',
+              sf_partner_type:     data.partner_type || '',
+              sf_start_date:       data.start_date || '',
+              sf_end_date:         data.end_date || '',
+              sf_fetched_at:       new Date().toISOString(),
+            };
+            await updateDoc(doc(db, 'cases', this.selectedCase.id), sfInfo);
+            Object.assign(this.selectedCase, sfInfo);
+            this.showSfData();
+          }
           this.sfLoading = false;
         },
 
