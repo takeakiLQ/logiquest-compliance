@@ -238,6 +238,30 @@
                     <p class="text-sm text-slate-700 whitespace-pre-wrap" x-text="sfData && sfData.shipping_memo || '—'"></p>
                   </div>
                 </div>
+
+                <!-- 単価アップ管理 -->
+                <div class="mt-3 pt-3 border-t border-slate-100">
+                  <p class="text-xs font-semibold text-slate-500 mb-2">📈 単価アップ管理</p>
+                  <div class="grid grid-cols-3 gap-3">
+                    <div class="bg-amber-50 rounded p-2">
+                      <p class="text-xs text-slate-400">単価アップ交渉日</p>
+                      <p class="text-sm text-slate-700" x-text="sfData && sfData.tanka_kousyoubi || '—'"></p>
+                    </div>
+                    <div class="bg-amber-50 rounded p-2">
+                      <p class="text-xs text-slate-400">単価アップ適応日</p>
+                      <p class="text-sm text-slate-700" x-text="sfData && sfData.tanka_tekioubi || '—'"></p>
+                    </div>
+                    <div class="bg-amber-50 rounded p-2">
+                      <p class="text-xs text-slate-400">単価アップ交渉経緯</p>
+                      <p class="text-sm text-slate-700" x-text="sfData && sfData.tanka_background || '—'"></p>
+                    </div>
+                    <div class="bg-amber-50 rounded p-2 col-span-3">
+                      <p class="text-xs text-slate-400">単価アップ交渉（コメント）</p>
+                      <p class="text-sm text-slate-700 whitespace-pre-wrap" x-text="sfData && sfData.tanka_kousyou_text || '—'"></p>
+                    </div>
+                  </div>
+                </div>
+
                 <div class="flex items-center justify-between">
                   <p class="text-xs text-slate-400" x-show="sfData && sfData.fetched_at"
                     x-text="'取得日時：' + formatDateTime(sfData && sfData.fetched_at)"></p>
@@ -646,15 +670,19 @@
         showSfData() {
           if (!this.selectedCase) return;
           this.sfData = {
-            record_name:      this.selectedCase.sf_record_name || '—',
-            shipper_name:     this.selectedCase.sf_shipper_name || this.selectedCase.shipper_name || '—',
-            contractor_name:  this.selectedCase.sf_contractor_name || this.selectedCase.contractor_name || '—',
-            driver_situation: this.selectedCase.sf_driver_situation || '—',
-            partner_type:     this.selectedCase.sf_partner_type || '—',
-            start_date:       this.selectedCase.sf_start_date || '—',
-            end_date:         this.selectedCase.sf_end_date || '—',
-            shipping_memo:    this.selectedCase.sf_shipping_memo || '—',
-            fetched_at:       this.selectedCase.sf_fetched_at || '',
+            record_name:        this.selectedCase.sf_record_name || '—',
+            shipper_name:       this.selectedCase.sf_shipper_name || this.selectedCase.shipper_name || '—',
+            contractor_name:    this.selectedCase.sf_contractor_name || this.selectedCase.contractor_name || '—',
+            driver_situation:   this.selectedCase.sf_driver_situation || '—',
+            partner_type:       this.selectedCase.sf_partner_type || '—',
+            start_date:         this.selectedCase.sf_start_date || '—',
+            end_date:           this.selectedCase.sf_end_date || '—',
+            shipping_memo:      this.selectedCase.sf_shipping_memo || '—',
+            tanka_kousyoubi:    this.selectedCase.sf_tanka_kousyoubi || '',
+            tanka_tekioubi:     this.selectedCase.sf_tanka_tekioubi || '',
+            tanka_background:   this.selectedCase.sf_tanka_background || '',
+            tanka_kousyou_text: this.selectedCase.sf_tanka_kousyou_text || '',
+            fetched_at:         this.selectedCase.sf_fetched_at || '',
           };
         },
 
@@ -669,15 +697,19 @@
             // Firestoreにも保存し直す
             const { db, doc, updateDoc } = window.appData;
             const sfInfo = {
-              sf_record_name:      data.record_name || '',
-              sf_shipper_name:     data.shipper_name || '',
-              sf_contractor_name:  data.contractor_name || '',
-              sf_driver_situation: data.driver_situation || '',
-              sf_partner_type:     data.partner_type || '',
-              sf_start_date:       data.start_date || '',
-              sf_end_date:         data.end_date || '',
-              sf_shipping_memo:    data.shipping_memo || '',
-              sf_fetched_at:       new Date().toISOString(),
+              sf_record_name:           data.record_name || '',
+              sf_shipper_name:          data.shipper_name || '',
+              sf_contractor_name:       data.contractor_name || '',
+              sf_driver_situation:      data.driver_situation || '',
+              sf_partner_type:          data.partner_type || '',
+              sf_start_date:            data.start_date || '',
+              sf_end_date:              data.end_date || '',
+              sf_shipping_memo:         data.shipping_memo || '',
+              sf_tanka_kousyoubi:       data.tanka_kousyoubi || '',
+              sf_tanka_tekioubi:        data.tanka_tekioubi || '',
+              sf_tanka_background:      data.tanka_background || '',
+              sf_tanka_kousyou_text:    data.tanka_kousyou_text || '',
+              sf_fetched_at:            new Date().toISOString(),
             };
             await updateDoc(doc(db, 'cases', this.selectedCase.id), sfInfo);
             Object.assign(this.selectedCase, sfInfo);
@@ -860,15 +892,19 @@
               const data = await res.json();
               if (data.record) {
                 sfInfo = {
-                  sf_record_name:      data.record_name || '',
-                  sf_shipper_name:     data.shipper_name || '',
-                  sf_contractor_name:  data.contractor_name || '',
-                  sf_driver_situation: data.driver_situation || '',
-                  sf_partner_type:     data.partner_type || '',
-                  sf_start_date:       data.start_date || '',
-                  sf_end_date:         data.end_date || '',
-                  sf_shipping_memo:    data.shipping_memo || '',
-                  sf_fetched_at:       now,
+                  sf_record_name:           data.record_name || '',
+                  sf_shipper_name:          data.shipper_name || '',
+                  sf_contractor_name:       data.contractor_name || '',
+                  sf_driver_situation:      data.driver_situation || '',
+                  sf_partner_type:          data.partner_type || '',
+                  sf_start_date:            data.start_date || '',
+                  sf_end_date:              data.end_date || '',
+                  sf_shipping_memo:         data.shipping_memo || '',
+                  sf_tanka_kousyoubi:       data.tanka_kousyoubi || '',
+                  sf_tanka_tekioubi:        data.tanka_tekioubi || '',
+                  sf_tanka_background:      data.tanka_background || '',
+                  sf_tanka_kousyou_text:    data.tanka_kousyou_text || '',
+                  sf_fetched_at:            now,
                 };
                 // 荷主・委託先名が未入力なら自動補完
                 if (!this.newCase.shipper_name && data.shipper_name)
