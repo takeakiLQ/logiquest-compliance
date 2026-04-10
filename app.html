@@ -10,23 +10,19 @@
     [x-cloak] { display: none !important; }
     .chat-bubble-me { border-radius: 18px 18px 4px 18px; }
     .chat-bubble-other { border-radius: 18px 18px 18px 4px; }
-    .chat-bubble-escalation { border-radius: 12px; }
     #chat-area { scroll-behavior: smooth; }
   </style>
 </head>
 <body class="bg-slate-100 h-screen overflow-hidden" x-data="app()" x-init="init()" x-cloak>
 
-  <!-- ログインチェック中 -->
   <div x-show="!ready" class="h-screen flex items-center justify-center">
     <div class="text-slate-400 text-sm">読み込み中...</div>
   </div>
 
   <div x-show="ready" class="h-screen flex overflow-hidden">
 
-    <!-- ========== サイドバー ========== -->
+    <!-- サイドバー -->
     <aside class="w-72 bg-white border-r border-slate-200 flex flex-col flex-shrink-0">
-
-      <!-- ヘッダー -->
       <div class="px-4 py-4 border-b border-slate-200">
         <div class="flex items-center justify-between mb-3">
           <div>
@@ -35,15 +31,12 @@
           </div>
           <button @click="logout()" class="text-xs text-slate-400 hover:text-slate-600">ログアウト</button>
         </div>
-
-        <!-- 新規案件ボタン -->
         <button @click="openNewCase()"
           class="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors">
           ＋ 新規相談を登録
         </button>
       </div>
 
-      <!-- 検索・フィルター -->
       <div class="px-4 py-3 border-b border-slate-100">
         <input type="text" x-model="searchQuery" placeholder="案件を検索..."
           class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400" />
@@ -57,11 +50,10 @@
         </div>
       </div>
 
-      <!-- 案件リスト -->
       <div class="flex-1 overflow-y-auto">
-        <template x-for="c in filteredCases" :key="c.case_id">
+        <template x-for="c in filteredCases" :key="c.id">
           <div @click="selectCase(c)"
-            :class="selectedCase && selectedCase.case_id === c.case_id ? 'bg-blue-50 border-l-2 border-blue-500' : 'border-l-2 border-transparent hover:bg-slate-50'"
+            :class="selectedCase && selectedCase.id === c.id ? 'bg-blue-50 border-l-2 border-blue-500' : 'border-l-2 border-transparent hover:bg-slate-50'"
             class="px-4 py-3 cursor-pointer transition-colors border-b border-slate-100">
             <div class="flex items-start justify-between gap-2">
               <div class="flex-1 min-w-0">
@@ -77,21 +69,16 @@
             </div>
           </div>
         </template>
-        <div x-show="filteredCases.length === 0" class="text-center text-sm text-slate-400 py-10">
-          案件がありません
-        </div>
+        <div x-show="filteredCases.length === 0" class="text-center text-sm text-slate-400 py-10">案件がありません</div>
       </div>
     </aside>
 
-    <!-- ========== メインエリア ========== -->
+    <!-- メインエリア -->
     <main class="flex-1 flex flex-col overflow-hidden">
-
-      <!-- 案件未選択 -->
       <div x-show="!selectedCase" class="flex-1 flex items-center justify-center text-slate-400 text-sm">
         左の一覧から案件を選択してください
       </div>
 
-      <!-- 案件詳細 -->
       <div x-show="selectedCase" class="flex-1 flex flex-col overflow-hidden">
 
         <!-- 案件ヘッダー -->
@@ -99,11 +86,9 @@
           <div class="flex items-start justify-between">
             <div>
               <div class="flex items-center gap-3 mb-1">
-                <h2 class="text-base font-semibold text-slate-800"
-                  x-text="selectedCase && selectedCase.contractor_name"></h2>
+                <h2 class="text-base font-semibold text-slate-800" x-text="selectedCase && selectedCase.contractor_name"></h2>
                 <span :class="selectedCase && statusColor(selectedCase.status)"
-                  class="text-xs px-2.5 py-0.5 rounded-full"
-                  x-text="selectedCase && selectedCase.status"></span>
+                  class="text-xs px-2.5 py-0.5 rounded-full" x-text="selectedCase && selectedCase.status"></span>
                 <span x-show="selectedCase && selectedCase.priority === '急'"
                   class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">急</span>
               </div>
@@ -112,7 +97,6 @@
                 　担当：<span x-text="selectedCase && selectedCase.owner_name"></span>
               </p>
             </div>
-            <!-- ステータス変更 -->
             <div class="flex items-center gap-2">
               <select x-model="newStatus"
                 class="text-sm border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-blue-400">
@@ -127,7 +111,6 @@
             </div>
           </div>
 
-          <!-- SF情報 & 契約条件タブ -->
           <div class="flex gap-4 mt-3">
             <button @click="infoTab = 'contract'"
               :class="infoTab === 'contract' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-400'"
@@ -140,19 +123,16 @@
               class="text-xs pb-1 font-medium">ファイル</button>
           </div>
 
-          <!-- タブ内容 -->
           <div class="mt-3">
             <!-- 契約条件 -->
             <div x-show="infoTab === 'contract'" class="grid grid-cols-2 gap-4">
               <div class="bg-slate-50 rounded-lg p-3">
                 <p class="text-xs text-slate-400 mb-1">荷主との契約条件</p>
-                <p class="text-sm text-slate-700 whitespace-pre-wrap"
-                  x-text="selectedCase && (selectedCase.shipper_conditions || '未入力')"></p>
+                <p class="text-sm text-slate-700 whitespace-pre-wrap" x-text="selectedCase && (selectedCase.shipper_conditions || '未入力')"></p>
               </div>
               <div class="bg-slate-50 rounded-lg p-3">
                 <p class="text-xs text-slate-400 mb-1">委託先との契約条件</p>
-                <p class="text-sm text-slate-700 whitespace-pre-wrap"
-                  x-text="selectedCase && (selectedCase.contractor_conditions || '未入力')"></p>
+                <p class="text-sm text-slate-700 whitespace-pre-wrap" x-text="selectedCase && (selectedCase.contractor_conditions || '未入力')"></p>
               </div>
             </div>
 
@@ -160,12 +140,26 @@
             <div x-show="infoTab === 'sf'">
               <div x-show="sfLoading" class="text-xs text-slate-400">SF情報を取得中...</div>
               <div x-show="!sfLoading && sfData" class="grid grid-cols-3 gap-3">
-                <template x-for="(val, key) in sfData" :key="key">
-                  <div x-show="val && key !== 'Id' && key !== 'attributes'" class="bg-slate-50 rounded p-2">
-                    <p class="text-xs text-slate-400 truncate" x-text="key"></p>
-                    <p class="text-sm text-slate-700 truncate" x-text="val"></p>
-                  </div>
-                </template>
+                <div class="bg-slate-50 rounded p-2">
+                  <p class="text-xs text-slate-400">案件名</p>
+                  <p class="text-sm text-slate-700 truncate" x-text="sfData && sfData.record_name || '—'"></p>
+                </div>
+                <div class="bg-slate-50 rounded p-2">
+                  <p class="text-xs text-slate-400">配車ステータス</p>
+                  <p class="text-sm text-slate-700 truncate" x-text="sfData && sfData.driver_situation || '—'"></p>
+                </div>
+                <div class="bg-slate-50 rounded p-2">
+                  <p class="text-xs text-slate-400">委託先区分</p>
+                  <p class="text-sm text-slate-700 truncate" x-text="sfData && sfData.partner_type || '—'"></p>
+                </div>
+                <div class="bg-slate-50 rounded p-2">
+                  <p class="text-xs text-slate-400">開始日</p>
+                  <p class="text-sm text-slate-700" x-text="sfData && sfData.start_date || '—'"></p>
+                </div>
+                <div class="bg-slate-50 rounded p-2">
+                  <p class="text-xs text-slate-400">終了日</p>
+                  <p class="text-sm text-slate-700" x-text="sfData && sfData.end_date || '—'"></p>
+                </div>
               </div>
             </div>
 
@@ -185,7 +179,7 @@
                 <span x-show="uploadingFile" class="text-xs text-slate-400">アップロード中...</span>
               </div>
               <div class="space-y-1">
-                <template x-for="f in caseFiles" :key="f.rec_id">
+                <template x-for="f in caseFiles" :key="f.id">
                   <div class="flex items-center gap-3 bg-slate-50 rounded p-2">
                     <span :class="fileTypeColor(f.file_type)" class="text-xs px-2 py-0.5 rounded-full" x-text="f.file_type"></span>
                     <a :href="f.url" target="_blank" class="text-sm text-blue-600 hover:underline truncate flex-1" x-text="f.file_name"></a>
@@ -201,7 +195,7 @@
 
         <!-- チャットエリア -->
         <div id="chat-area" class="flex-1 overflow-y-auto px-6 py-4 space-y-3">
-          <template x-for="msg in messages" :key="msg.message_id">
+          <template x-for="msg in messages" :key="msg.id">
             <div>
               <!-- エスカレーション -->
               <div x-show="msg.msg_type === 'エスカレーション'"
@@ -218,19 +212,17 @@
 
               <!-- 通常メッセージ -->
               <div x-show="msg.msg_type !== 'エスカレーション'"
-                :class="msg.sender_id === user.user_id ? 'flex-row-reverse' : ''"
+                :class="msg.sender_id === user.uid ? 'flex-row-reverse' : ''"
                 class="flex items-end gap-2">
-                <!-- アバター -->
-                <div x-show="msg.sender_id !== user.user_id"
+                <div x-show="msg.sender_id !== user.uid"
                   :class="roleAvatarColor(msg.sender_role)"
                   class="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-medium flex-shrink-0"
                   x-text="msg.sender_name.charAt(0)">
                 </div>
-                <div :class="msg.sender_id === user.user_id ? 'items-end' : 'items-start'" class="flex flex-col max-w-md">
-                  <p x-show="msg.sender_id !== user.user_id"
-                    class="text-xs text-slate-400 mb-1"
+                <div :class="msg.sender_id === user.uid ? 'items-end' : 'items-start'" class="flex flex-col max-w-md">
+                  <p x-show="msg.sender_id !== user.uid" class="text-xs text-slate-400 mb-1"
                     x-text="msg.sender_name + '（' + msg.sender_role + '）'"></p>
-                  <div :class="msg.sender_id === user.user_id
+                  <div :class="msg.sender_id === user.uid
                     ? 'bg-blue-600 text-white chat-bubble-me'
                     : 'bg-white border border-slate-200 text-slate-800 chat-bubble-other'"
                     class="px-4 py-2.5 text-sm">
@@ -245,13 +237,12 @@
 
         <!-- 入力エリア -->
         <div class="bg-white border-t border-slate-200 px-4 py-3">
-          <!-- エスカレーション -->
           <div x-show="showEscalate" class="mb-3 bg-amber-50 border border-amber-200 rounded-xl p-3">
             <p class="text-xs font-medium text-amber-700 mb-2">エスカレーション先を選択</p>
             <select x-model="escalateTarget" class="w-full text-sm border border-amber-200 rounded-lg px-3 py-1.5 bg-white mb-2">
               <option value="">-- ユーザーを選択 --</option>
-              <template x-for="u in users" :key="u.user_id">
-                <option :value="u.user_id + '|' + u.name" x-text="u.name + '（' + u.role + '）'"></option>
+              <template x-for="u in users" :key="u.id">
+                <option :value="u.id + '|' + u.name" x-text="u.name + '（' + u.role + '）'"></option>
               </template>
             </select>
             <button @click="showEscalate = false" class="text-xs text-slate-400">キャンセル</button>
@@ -262,20 +253,18 @@
               :class="showEscalate ? 'bg-amber-100 text-amber-700' : 'text-slate-400 hover:text-slate-600'"
               class="p-2 rounded-lg transition-colors flex-shrink-0" title="エスカレーション">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M7 11l5-5m0 0l5 5m-5-5v12"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/>
               </svg>
             </button>
-            <textarea x-model="newMessage" @keydown.meta.enter="sendMessage()" @keydown.ctrl.enter="sendMessage()"
+            <textarea x-model="newMessage" @keydown.ctrl.enter="sendMessage()"
               placeholder="メッセージを入力... (Ctrl+Enter で送信)"
               rows="2"
               class="flex-1 text-sm border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-blue-400 resize-none">
             </textarea>
             <button @click="sendMessage()" :disabled="!newMessage.trim()"
-              class="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:cursor-not-allowed text-white p-2.5 rounded-xl transition-colors flex-shrink-0">
+              class="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 text-white p-2.5 rounded-xl transition-colors flex-shrink-0">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
               </svg>
             </button>
           </div>
@@ -284,7 +273,7 @@
     </main>
   </div>
 
-  <!-- ========== 新規案件モーダル ========== -->
+  <!-- 新規案件モーダル -->
   <div x-show="showNewCase" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
     <div class="bg-white rounded-2xl w-full max-w-xl shadow-xl overflow-y-auto max-h-[90vh]">
       <div class="px-6 py-5 border-b border-slate-200 flex items-center justify-between">
@@ -292,21 +281,16 @@
         <button @click="showNewCase = false" class="text-slate-400 hover:text-slate-600">✕</button>
       </div>
       <div class="px-6 py-5 space-y-4">
-
-        <!-- SF IDで検索 -->
         <div>
-          <label class="block text-xs font-medium text-slate-500 mb-1">SalesforceアカウントID</label>
+          <label class="block text-xs font-medium text-slate-500 mb-1">SalesforceレコードID</label>
           <div class="flex gap-2">
-            <input type="text" x-model="newCase.sf_account_id" placeholder="001XXXXXXXXXXXXXXX"
+            <input type="text" x-model="newCase.sf_record_id" placeholder="a28XXXXXXXXXXXXXXX"
               class="flex-1 text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400" />
             <button @click="fetchSfForNewCase()"
-              class="text-sm bg-slate-800 text-white px-3 py-2 rounded-lg hover:bg-slate-700">
-              SF取得
-            </button>
+              class="text-sm bg-slate-800 text-white px-3 py-2 rounded-lg hover:bg-slate-700">SF取得</button>
           </div>
           <div x-show="sfFetched" class="mt-2 bg-blue-50 rounded-lg p-2 text-xs text-blue-700" x-text="sfFetchedMsg"></div>
         </div>
-
         <div>
           <label class="block text-xs font-medium text-slate-500 mb-1">荷主名 <span class="text-red-400">*</span></label>
           <input type="text" x-model="newCase.shipper_name"
@@ -317,12 +301,11 @@
           <input type="text" x-model="newCase.contractor_name"
             class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400" />
         </div>
-
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-xs font-medium text-slate-500 mb-1">相談区分</label>
             <select x-model="newCase.consultation_type"
-              class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none">
+              class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2">
               <option>単価交渉</option>
               <option>その他法令対応</option>
               <option>契約見直し</option>
@@ -331,52 +314,72 @@
           <div>
             <label class="block text-xs font-medium text-slate-500 mb-1">優先度</label>
             <select x-model="newCase.priority"
-              class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none">
+              class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2">
               <option>通常</option>
               <option>急</option>
               <option>低</option>
             </select>
           </div>
         </div>
-
         <div>
           <label class="block text-xs font-medium text-slate-500 mb-1">荷主との契約条件</label>
           <textarea x-model="newCase.shipper_conditions" rows="3"
-            placeholder="現在の荷主との運賃・条件など"
-            class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400 resize-none"></textarea>
+            class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 resize-none"></textarea>
         </div>
         <div>
           <label class="block text-xs font-medium text-slate-500 mb-1">委託先との契約条件</label>
           <textarea x-model="newCase.contractor_conditions" rows="3"
-            placeholder="現在の委託先との運賃・条件など"
-            class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400 resize-none"></textarea>
+            class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 resize-none"></textarea>
         </div>
         <div>
           <label class="block text-xs font-medium text-slate-500 mb-1">相談概要</label>
           <textarea x-model="newCase.summary" rows="3"
             placeholder="委託先から単価アップの交渉があった背景・詳細など"
-            class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400 resize-none"></textarea>
+            class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 resize-none"></textarea>
         </div>
       </div>
       <div class="px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
-        <button @click="showNewCase = false"
-          class="text-sm text-slate-500 hover:text-slate-700 px-4 py-2">キャンセル</button>
+        <button @click="showNewCase = false" class="text-sm text-slate-500 px-4 py-2">キャンセル</button>
         <button @click="submitNewCase()" :disabled="!newCase.shipper_name || !newCase.contractor_name"
-          class="text-sm bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 text-white px-5 py-2 rounded-lg transition-colors">
+          class="text-sm bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 text-white px-5 py-2 rounded-lg">
           登録する
         </button>
       </div>
     </div>
   </div>
 
-  <script>
-    const GAS_URL = 'https://script.google.com/macros/s/AKfycbwh3-gII3jQ7OVvNaYQ07G0L9w_DVcbDvFljbYlCVFkBk5xRb996iy7H8W8ZmBeCDkh/exec';
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+    import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+    import {
+      getFirestore, collection, doc, addDoc, updateDoc, onSnapshot,
+      query, where, orderBy, serverTimestamp, getDoc, getDocs, setDoc
+    } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
+    const firebaseConfig = {
+      apiKey: "AIzaSyAy3bHVIg7f_BGhPdFOPG86k8dTsp4yX6g",
+      authDomain: "logiquest-compliance.firebaseapp.com",
+      projectId: "logiquest-compliance",
+      storageBucket: "logiquest-compliance.firebasestorage.app",
+      messagingSenderId: "34310317694",
+      appId: "1:34310317694:web:9f2c4fbb530cd0b8beda2f"
+    };
+
+    const firebaseApp = initializeApp(firebaseConfig);
+    const auth = getAuth(firebaseApp);
+    const db = getFirestore(firebaseApp);
+
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbwh3-gII3jQ7OVvNaYQ07G0L9w_DVcbDvFljbYlCVFkBk5xRb996iy7H8W8ZmBeCDkh/exec';
+    const ALLOWED_DOMAIN = 'logiquest.co.jp';
+
+    window.appData = { auth, db, GAS_URL, ALLOWED_DOMAIN, serverTimestamp, collection, doc, addDoc, updateDoc, onSnapshot, query, where, orderBy, getDoc, getDocs, setDoc };
+  </script>
+
+  <script>
     function app() {
       return {
         ready: false,
         user: {},
-        token: '',
         cases: [],
         selectedCase: null,
         messages: [],
@@ -397,6 +400,7 @@
         sfFetched: false,
         sfFetchedMsg: '',
         newCase: {},
+        unsubMessages: null,
 
         statusList: ['新規相談','公取確認中','対応方針決定','委託先交渉中','書類提出済','完了','取り下げ'],
         statusFilters: [
@@ -409,31 +413,63 @@
         ],
 
         async init() {
-          this.token = sessionStorage.getItem('token');
-          const u = sessionStorage.getItem('user');
-          if (!this.token || !u) { window.location.href = 'index.html'; return; }
-          this.user = JSON.parse(u);
-          await this.loadCases();
-          await this.loadUsers();
-          this.ready = true;
-        },
+          const { auth, db, collection, getDocs, setDoc, doc, onSnapshot, orderBy, query } = window.appData;
 
-        async api(payload) {
-          const res = await fetch(GAS_URL, {
-            method: 'POST',
-            body: JSON.stringify({ ...payload, token: this.token }),
+          // 認証チェック
+          await new Promise(resolve => {
+            const unsub = auth.onAuthStateChanged(async (firebaseUser) => {
+              unsub();
+              if (!firebaseUser) {
+                window.location.href = 'index.html';
+                return;
+              }
+              const domain = firebaseUser.email.split('@')[1];
+              if (domain !== window.appData.ALLOWED_DOMAIN) {
+                await auth.signOut();
+                window.location.href = 'index.html';
+                return;
+              }
+
+              // ユーザー情報をFirestoreに保存/取得
+              const userRef = doc(db, 'users', firebaseUser.uid);
+              const userSnap = await getDocs(query(collection(db, 'users')));
+              let existingUser = null;
+              userSnap.forEach(d => { if (d.id === firebaseUser.uid) existingUser = d.data(); });
+
+              if (!existingUser) {
+                await setDoc(userRef, {
+                  email: firebaseUser.email,
+                  name: firebaseUser.displayName || firebaseUser.email,
+                  role: '営業',
+                  department: '',
+                  created_at: new Date().toISOString(),
+                });
+                existingUser = { email: firebaseUser.email, name: firebaseUser.displayName, role: '営業', department: '' };
+              }
+
+              this.user = { uid: firebaseUser.uid, ...existingUser };
+              resolve();
+            });
           });
-          return res.json();
-        },
 
-        async loadCases() {
-          const data = await this.api({ action: 'getCases' });
-          this.cases = data.cases || [];
-        },
+          // 案件一覧をリアルタイムで取得
+          const casesRef = collection(db, 'cases');
+          const q = query(casesRef, orderBy('updated_at', 'desc'));
+          onSnapshot(q, (snapshot) => {
+            const allCases = [];
+            snapshot.forEach(d => allCases.push({ id: d.id, ...d.data() }));
+            // 営業は自分の案件のみ
+            this.cases = this.user.role === '営業'
+              ? allCases.filter(c => c.owner_id === this.user.uid)
+              : allCases;
+          });
 
-        async loadUsers() {
-          const data = await this.api({ action: 'getUsers' });
-          this.users = data.users || [];
+          // ユーザー一覧取得
+          const userSnap = await getDocs(collection(db, 'users'));
+          this.users = [];
+          userSnap.forEach(d => this.users.push({ id: d.id, ...d.data() }));
+
+          this.ready = true;
         },
 
         async selectCase(c) {
@@ -443,64 +479,102 @@
           this.sfData = null;
           this.caseFiles = [];
           this.showEscalate = false;
-          await this.loadMessages();
-        },
 
-        async loadMessages() {
-          const data = await this.api({ action: 'getMessages', case_id: this.selectedCase.case_id });
-          this.messages = data.messages || [];
-          this.$nextTick(() => {
-            const el = document.getElementById('chat-area');
-            if (el) el.scrollTop = el.scrollHeight;
+          // メッセージをリアルタイム購読
+          if (this.unsubMessages) this.unsubMessages();
+          const { db, collection, query, where, orderBy, onSnapshot } = window.appData;
+          const q = query(
+            collection(db, 'messages'),
+            where('case_id', '==', c.id),
+            orderBy('sent_at', 'asc')
+          );
+          this.unsubMessages = onSnapshot(q, (snapshot) => {
+            this.messages = [];
+            snapshot.forEach(d => this.messages.push({ id: d.id, ...d.data() }));
+            this.$nextTick(() => {
+              const el = document.getElementById('chat-area');
+              if (el) el.scrollTop = el.scrollHeight;
+            });
           });
         },
 
         async loadFiles() {
-          const data = await this.api({ action: 'getFiles', case_id: this.selectedCase.case_id });
-          this.caseFiles = data.files || [];
+          const { db, collection, query, where, getDocs } = window.appData;
+          const q = query(collection(db, 'files'), where('case_id', '==', this.selectedCase.id));
+          const snap = await getDocs(q);
+          this.caseFiles = [];
+          snap.forEach(d => this.caseFiles.push({ id: d.id, ...d.data() }));
         },
 
         async loadSfData() {
-          if (!this.selectedCase.sf_account_id) return;
+          if (!this.selectedCase.sf_record_id) return;
           this.sfLoading = true;
-          const data = await this.api({
-            action: 'getSfData',
-            account_id: this.selectedCase.sf_account_id,
-            contract_id: this.selectedCase.sf_contract_id,
-          });
-          this.sfData = data.account || {};
+          const token = await this.getGasToken();
+          const url = window.appData.GAS_URL + '?action=getSfData&account_id=' + this.selectedCase.sf_record_id + '&token=' + token;
+          const res = await fetch(url);
+          const data = await res.json();
+          this.sfData = data;
           this.sfLoading = false;
+        },
+
+        async getGasToken() {
+          const { auth } = window.appData;
+          const idToken = await auth.currentUser.getIdToken();
+          const url = window.appData.GAS_URL + '?action=initSession&idToken=' + encodeURIComponent(idToken);
+          const res = await fetch(url);
+          const data = await res.json();
+          return data.token || '';
         },
 
         async sendMessage() {
           if (!this.newMessage.trim()) return;
+          const { db, collection, addDoc, serverTimestamp } = window.appData;
           const isEscalate = this.showEscalate && this.escalateTarget;
           const [toId, toName] = isEscalate ? this.escalateTarget.split('|') : ['', ''];
 
-          await this.api({
-            action: isEscalate ? 'escalate' : 'sendMessage',
-            case_id: this.selectedCase.case_id,
-            body: this.newMessage,
+          await addDoc(collection(db, 'messages'), {
+            case_id: this.selectedCase.id,
+            sender_id: this.user.uid,
+            sender_name: this.user.name,
+            sender_role: this.user.role,
+            body: isEscalate ? `【エスカレーション】${this.newMessage}` : this.newMessage,
+            sent_at: new Date().toISOString(),
             msg_type: isEscalate ? 'エスカレーション' : '通常',
             to_user_id: toId,
             to_user_name: toName,
           });
 
+          // 案件の更新日を更新
+          const { doc, updateDoc } = window.appData;
+          await updateDoc(doc(db, 'cases', this.selectedCase.id), {
+            updated_at: new Date().toISOString(),
+          });
+
           this.newMessage = '';
           this.showEscalate = false;
           this.escalateTarget = '';
-          await this.loadMessages();
         },
 
         async changeStatus() {
           if (this.newStatus === this.selectedCase.status) return;
-          await this.api({
-            action: 'updateStatus',
-            case_id: this.selectedCase.case_id,
-            new_status: this.newStatus,
+          const { db, doc, updateDoc, collection, addDoc } = window.appData;
+          const now = new Date().toISOString();
+
+          await updateDoc(doc(db, 'cases', this.selectedCase.id), {
+            status: this.newStatus,
+            updated_at: now,
           });
+
+          await addDoc(collection(db, 'status_log'), {
+            case_id: this.selectedCase.id,
+            old_status: this.selectedCase.status,
+            new_status: this.newStatus,
+            changed_by: this.user.uid,
+            changed_by_name: this.user.name,
+            changed_at: now,
+          });
+
           this.selectedCase.status = this.newStatus;
-          await this.loadCases();
         },
 
         async onFileSelected(event) {
@@ -508,19 +582,39 @@
           if (!file) return;
           this.uploadingFile = true;
 
+          // GAS経由でGoogleドライブにアップロード
           const reader = new FileReader();
           reader.onload = async (e) => {
             const base64 = e.target.result.split(',')[1];
-            await this.api({
+            const token = await this.getGasToken();
+            const params = new URLSearchParams({
               action: 'uploadFile',
-              case_id: this.selectedCase.case_id,
+              token,
+              case_id: this.selectedCase.id,
               file_name: file.name,
               file_data: base64,
               mime_type: file.type,
               file_type: this.uploadFileType,
             });
+            const res = await fetch(window.appData.GAS_URL + '?' + params.toString());
+            const data = await res.json();
+
+            if (data.success) {
+              // Firestoreにファイル情報を記録
+              const { db, collection, addDoc } = window.appData;
+              await addDoc(collection(db, 'files'), {
+                case_id: this.selectedCase.id,
+                file_name: file.name,
+                drive_file_id: data.file_id,
+                url: data.url,
+                uploader_id: this.user.uid,
+                uploader_name: this.user.name,
+                uploaded_at: new Date().toISOString(),
+                file_type: this.uploadFileType,
+              });
+              await this.loadFiles();
+            }
             this.uploadingFile = false;
-            await this.loadFiles();
           };
           reader.readAsDataURL(file);
           event.target.value = '';
@@ -528,8 +622,7 @@
 
         openNewCase() {
           this.newCase = {
-            sf_account_id: '', sf_contract_id: '',
-            shipper_name: '', contractor_name: '',
+            sf_record_id: '', shipper_name: '', contractor_name: '',
             consultation_type: '単価交渉', priority: '通常',
             shipper_conditions: '', contractor_conditions: '', summary: '',
           };
@@ -538,8 +631,12 @@
         },
 
         async fetchSfForNewCase() {
-          if (!this.newCase.sf_account_id) return;
-          const data = await this.api({ action: 'getSfData', account_id: this.newCase.sf_account_id });
+          if (!this.newCase.sf_record_id) return;
+          const token = await this.getGasToken();
+          const url = window.appData.GAS_URL + '?action=getSfData&account_id=' + this.newCase.sf_record_id + '&token=' + token;
+          const res = await fetch(url);
+          const data = await res.json();
+
           if (data.record) {
             if (data.shipper_name) this.newCase.shipper_name = data.shipper_name;
             if (data.contractor_name) this.newCase.contractor_name = data.contractor_name;
@@ -549,7 +646,6 @@
               data.shipper_name ? `荷主: ${data.shipper_name}` : '',
               data.contractor_name ? `委託先: ${data.contractor_name}` : '',
               data.driver_situation ? `配車ステータス: ${data.driver_situation}` : '',
-              data.partner_type ? `委託先区分: ${data.partner_type}` : '',
               data.start_date ? `開始: ${data.start_date}` : '',
               data.end_date ? `終了: ${data.end_date}` : '',
             ].filter(Boolean).join('　');
@@ -560,13 +656,33 @@
         },
 
         async submitNewCase() {
-          const data = await this.api({ action: 'createCase', ...this.newCase });
-          if (data.success) {
-            this.showNewCase = false;
-            await this.loadCases();
-            const created = this.cases.find(c => c.case_id === data.case_id);
-            if (created) this.selectCase(created);
-          }
+          const { db, collection, addDoc } = window.appData;
+          const now = new Date().toISOString();
+          const docRef = await addDoc(collection(db, 'cases'), {
+            ...this.newCase,
+            owner_id: this.user.uid,
+            owner_name: this.user.name,
+            status: '新規相談',
+            created_at: now,
+            updated_at: now,
+          });
+
+          // ステータスログ
+          await addDoc(collection(db, 'status_log'), {
+            case_id: docRef.id,
+            old_status: '',
+            new_status: '新規相談',
+            changed_by: this.user.uid,
+            changed_by_name: this.user.name,
+            changed_at: now,
+          });
+
+          this.showNewCase = false;
+        },
+
+        async logout() {
+          await window.appData.auth.signOut();
+          window.location.href = 'index.html';
         },
 
         get filteredCases() {
@@ -601,20 +717,12 @@
         },
 
         roleAvatarColor(role) {
-          const map = {
-            '公取': 'bg-purple-500',
-            '上長': 'bg-slate-600',
-            '営業': 'bg-blue-500',
-          };
+          const map = { '公取': 'bg-purple-500', '上長': 'bg-slate-600', '営業': 'bg-blue-500' };
           return map[role] || 'bg-slate-400';
         },
 
         fileTypeColor(type) {
-          const map = {
-            '提出書類': 'bg-blue-100 text-blue-700',
-            '受領書類': 'bg-green-100 text-green-700',
-            '添付': 'bg-slate-100 text-slate-500',
-          };
+          const map = { '提出書類': 'bg-blue-100 text-blue-700', '受領書類': 'bg-green-100 text-green-700', '添付': 'bg-slate-100 text-slate-500' };
           return map[type] || 'bg-slate-100 text-slate-500';
         },
 
@@ -626,11 +734,6 @@
         formatDateTime(iso) {
           if (!iso) return '';
           return new Date(iso).toLocaleString('ja-JP', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-        },
-
-        logout() {
-          sessionStorage.clear();
-          window.location.href = 'index.html';
         },
       };
     }
